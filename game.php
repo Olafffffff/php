@@ -1,120 +1,31 @@
 <?php
-session_start();
-
-//słowa
-
-$easyWords = array("kot", "pies", "dom", "drzewo", "kwiat", "dach" , "piwo" , "keczup","suknia" , "buty" , "wino" ,"krew","praca","opona","biurko" , "magia", "taczka" );
-$hardWords = array("trudneslowo", "odpowiedzialnosc", "internet", "niepodleglosc" , "nosorozec" , "moralnosc","rzeczownik","przewodnik","musztarda", "hamburger" , "weterynarz","zapalniczka" );
-
-// Wybór trudności
-$difficulty = isset($_SESSION['difficulty']) ? $_SESSION['difficulty'] : 'easy';
-$wordList = ($difficulty === 'easy') ? $easyWords : $hardWords;
-
-// rozpoczecie gry
-if (!isset($_SESSION['word']) || isset($_POST['reset'])) {
-    $randomIndex = array_rand($wordList);
-    $_SESSION['word'] = $wordList[$randomIndex];
-    $_SESSION['guessed_letters'] = array();
-    $_SESSION['attempts_left'] = ($difficulty === 'easy') ? 10 : 4;
-    $_SESSION['hint_count'] = ($difficulty === 'easy') ? 1 : 3;
-    $_SESSION['word_guessed'] = false;
-}
-
-// Sprawdzenie, czy gra trwa
-$gameWon = isset($_SESSION['word']) && $_SESSION['word'] === implode('', array_intersect(str_split($_SESSION['word']), $_SESSION['guessed_letters']));
-
-// Sprawdzenie, czy skończyły się próby
-$gameLost = isset($_SESSION['attempts_left']) && $_SESSION['attempts_left'] === 1;
-
-// domyślnych wartości sesji
-if (!isset($_SESSION['wins'])) {
-    $_SESSION['wins'] = 0;
-}
-if (!isset($_SESSION['losses'])) {
-    $_SESSION['losses'] = 0;
-}
-if (!isset($_SESSION['game_won'])) {
-    $_SESSION['game_won'] = 0;
-}
-if (!isset($_SESSION['game_lost'])) {
-    $_SESSION['game_lost'] = 0;
-}
-
-// zwiększania liczników wygranych i przegranych rund
-if ($gameWon && !$gameLost) {
-    $_SESSION['game_won']++;
-    $_SESSION['wins']++;
-} elseif (!$gameWon && $gameLost) {
-    $_SESSION['game_lost']++;
-    $_SESSION['losses']++;
-}
-
-// Obsługa podpowiedzi
-if (isset($_POST['hint']) && $_SESSION['hint_count'] > 0 && !$gameWon && !$gameLost && !$_SESSION['word_guessed']) {
-    $hintIndices = array_diff(range(0, strlen($_SESSION['word']) - 1), array_keys($_SESSION['guessed_letters']));
-    $randomHintIndex = array_rand($hintIndices);
-    $randomHintLetterIndex = $hintIndices[$randomHintIndex];
-    $_SESSION['guessed_letters'][] = $_SESSION['word'][$randomHintLetterIndex];
-    $_SESSION['hint_count']--;
-}
-
-// Obsługa zgadywania litery
-if (isset($_POST['letter'])) {
-    $letter = strtolower($_POST['letter']);
-    if (ctype_alpha($letter)) {
-        if (!in_array($letter, $_SESSION['guessed_letters'])) {
-            $_SESSION['guessed_letters'][] = $letter;
-            if (!strpos($_SESSION['word'], $letter)) {
-                $_SESSION['attempts_left']--;
-            }
-        }
-    }
-}
 
 // Sprawdzenie czy wszystkie litery zostały odgadnięte
 if (array_diff(str_split($_SESSION['word']), $_SESSION['guessed_letters']) === []){
     $_SESSION['word_guessed'] =true;
 }
 
-?>
-<!DOCTYPE html>
-<html>
-<head>
-    <p><center>
-            <style>
-                body #grad1 {
-                    width: 1890px;
-                    height: 1000px;
-                    background-image: linear-gradient(white, lightcoral);
-                }
-            </style>
+// Sprawdzenie, czy gra trwa
+$gameWon = isset($_SESSION['word']) && $_SESSION['word'] === implode('', array_intersect(str_split($_SESSION['word']), $_SESSION['guessed_letters']));
 
-            <title>Gra Wisielec</title>
-            <style>
-                .hidden-letter {
-                    display: inline-block;
-                    border-bottom: 1px solid #000;
-                    margin: 0 5px;
-                    padding: 0 5px;
-                }
+// Sprawdzenie, czy skończyły się próby
+$gameLost = isset($_SESSION['attempts_left']) && $_SESSION['attempts_left'] === 0;
 
-                .visible-letter {
-                    display: inline-block;
-                    margin: 0 5px;
-                    padding: 0 5px;
-                }
-            </style>
-
-            </head>
-<body>
-<h1> </h1>
+// Przycisk zamkniecia gry
+echo '<form id="close" action="index.php" method="post">
+            <input type="hidden" name="reset" value="1">
+		<button class="absolute top-2 left-2 bg-red-500 hover:bg-red-600 rounded-full w-10 h-10 flex items-center justify-center focus:outline-none transition duration-300 ease-in-out transform hover:scale-110">
+    		<svg class="w-6 h-6 fill-current text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+        	<path d="M5.293 4.293a1 1 0 011.414 0L10 8.586l3.293-3.293a1 1 0 111.414 1.414L11.414 10l3.293 3.293a1 1 0 01-1.414 1.414L10 11.414l-3.293 3.293a1 1 0 01-1.414-1.414L8.586 10 5.293 6.707a1 1 0 010-1.414z" />
+    		</svg>
+		</button>
+		</form>
+		<p>';
 
 
+// Sprawdzenie, czy gra trwa i wyswietlanie klawiatury
+if (!$gameWon && !$gameLost && !$_SESSION['word_guessed']) {
 
-<?php
-
-// Wyświetlanie słowa z odkrytymi i zakrytymi literami
-echo '<p>';
 for ($i = 0; $i < strlen($_SESSION['word']); $i++) {
     $letter = $_SESSION['word'][$i];
     if (in_array($letter, $_SESSION['guessed_letters'])) {
@@ -123,170 +34,61 @@ for ($i = 0; $i < strlen($_SESSION['word']); $i++) {
         echo '<span class="hidden-letter">_</span>';
     }
 }
-echo '</p>';
-
-// Wyświetlanie liczby niewykorzystanych prób
-echo '<p>Liczba prób: ' . $_SESSION['attempts_left'] . '</p>';
+echo '</p><HR class="my-4">';
 
 // Wyświetlanie listy użytych liter
-echo '<p>Użyte litery: ' . implode(', ', $_SESSION['guessed_letters']) . '</p>';
+$allLetters = range('a', 'z');
 
-// Wyświetlanie licznika wygranych i przegranych rund
-echo '<p>Wygrane: ' . $_SESSION['wins'] . '</p>';
-echo '<p>Przegrane: ' . $_SESSION['losses'] . '</p>';
+echo '<form method="post" action="index.php">';
+echo '<div class="flex flex-wrap gap-2">';
+foreach ($allLetters as $letter) {
+    $keyClass = (in_array($letter, $_SESSION['guessed_letters'])) ? 'bg-gray-200' : 'bg-green-500 hover:bg-green-600 cursor-pointer';
+    echo '<div class="flex items-center justify-center w-12 h-12 rounded-md ' . $keyClass . '">';
+    echo '<button type="submit" id="letter" name="letter" value="' . $letter . '" class="text-gray-800">' . $letter . '</button>';
+    echo '</div>';
+}
+echo '</div>';
+echo '</form>';
 
-// Obliczanie wskaźnika skuteczności wygrywania
-$totalGames = $_SESSION['game_won'] + $_SESSION['game_lost'];
-$accuracyRate = ($totalGames > 0) ? ($_SESSION['game_won'] / $totalGames) * 100 : 0;
-echo '<p>Procentowy wskaźnik skuteczności: ' . $accuracyRate . '%</p>';
+// przycisk podpowiedzi
+if (!$gameWon && !$gameLost && !$_SESSION['word_guessed'] && $_SESSION['hint_count'] > 0) {
+    echo '<form method="post" action="index.php">
+    <div class="flex items-center justify-center w-12 h-12 rounded-md bg-yellow-500 hover:bg-green-600 cursor-pointer">
+            <button type="submit" id="hint" name="hint" value="hint" class="text-gray-800">?</button>
+        </div></form><HR class="my-4">
+        ';
+}
+}
+
 
 // Sprawdzenie, czy gra trwa
-if (!$gameWon && !$gameLost && !$_SESSION['word_guessed']) {
-    echo '
-        <form method="post" action="">
-            <label for="letter">Wprowadź literę:</label>
-            <input type="text" id="letter" name="letter" maxlength="1" pattern="[a-zA-Z]" autocomplete="off">
-            <input type="submit" value="Sprawdź">
-        </form>
-        ';
+if (!$gameWon && !$gameLost && !$_SESSION['word_guessed']) {   
 } elseif ($_SESSION['word_guessed']) {
-    echo '<p>Odgadnięte słowo: ' . $_SESSION['word'] . '</p>';
-    echo '
-        <form method="post" action="">
+    $_SESSION['game_won']++;
+    $_SESSION['wins']++;
+    echo '<div class="flex justify-center">Odgadnięte słowo: ' . $_SESSION['word'] . '</div><HR class="my-4">';
+    echo '<div class="flex justify-center">
+        <form method="post" action="index.php">
             <input type="hidden" name="reset" value="1">
-            <input type="submit" value="Zagraj od nowa">
-        </form>
+            <input type="submit" value="Zagraj od nowa" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded">
+        </form></div><HR class="my-4">
         ';
 } else {
-    echo '<p>Przegrana! Wykorzystano wszystkie próby.</p>';
-    echo '<p>Prawidłowe słowo: ' . $_SESSION['word'] . '</p>';
-    echo '
-        <form method="post" action="">
+    $_SESSION['game_lost']++;
+    $_SESSION['losses']++;
+    echo '<div class="flex justify-center"><p>Przegrana! Wykorzystano wszystkie próby.</div><HR class="my-4">';
+    echo '<div class="flex justify-center">Prawidłowe słowo: ' . $_SESSION['word'] . '</div><HR class="my-4">';
+    echo '<div class="flex justify-center">
+        <form method="post" action="index.php">
             <input type="hidden" name="reset" value="1">
-            <input type="submit" value="Zagraj od nowa">
-        </form>
+            <input type="submit" value="Zagraj od nowa" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded">
+        </form></div><HR class="my-4">
         ';
 }
 
 //  obrazy wisielca
 $attemptsLeft = $_SESSION['attempts_left'];
 // Obrazy dla łatwego trybu
-$hangmanImagesEasy = array(
-    ' 
-    
-    
-       
-    
-    
-=========',
-
-    ' 
-      |
-      |
-      |
-      |
-      |
-=========',
-
-    ' +----+
-      |
-      |
-      |
-      |
-      |
-=========',
-
-    ' +----+
-  |   |
-      |
-      |
-      |
-      |
-=========',
-
-    ' +----+
-  |   |
-  O   |
-      |
-      |
-      |
-=========',
-
-    ' +----+
-  |   |
-  O   |
-  |   |
-      |
-      |
-=========',
-
-    ' +----+
-  |   |
-  O   |
- /|   |
-      |
-      |
-=========',
-
-    ' +----+
-  |   |
-  O   |
- /|\\  |
-      |
-      |
-=========',
-
-    ' +----+
-  |   |
-  O   |
- /|\\  |
- /   |
-      |
-=========',
-
-    ' +----+
-  |   |
-  O   |
- /|\\  |
- / \\  |
-      |
-========='
-);
-
-// Obrazy dla trudnego trybu
-$hangmanImagesHard = array(
-    ' 
-    
-    
-       
-    
-    
-=========',
-
-    ' 
-      |
-      |
-      |
-      |
-      |
-=========',
-
-    ' +----+
-  |   |
-  O   |
- /|\\  |
-      |
-      |
-=========',
-
-    ' +----+
-  |   |
-  O   |
- /|\\  |
- / \\  |
-      |
-========='
-);
 
 // Wybór odpowiednich obrazów na podstawie trudności
 $hangmanImages = ($difficulty === 'easy') ? $hangmanImagesEasy : $hangmanImagesHard;
@@ -299,28 +101,43 @@ if ($hangmanImageIndex < 0) {
     $hangmanImageIndex = count($hangmanImages) - 2;
 }
 
+
 // Wyświetlanie obrazu wisielca
-echo '<pre>' . $hangmanImages[$hangmanImageIndex] . '</pre>';
+echo '<div class="flex justify-center"><pre>' . $hangmanImages[$hangmanImageIndex] . '</pre></div><HR class="my-4">';
 
 
+// Wyświetlanie liczby niewykorzystanych prób
+if ($_SESSION['difficulty'] === 'easy')
+	{
+	$progress = ($_SESSION['attempts_left']/10)*100;
+	} else {
+	$progress = ($_SESSION['attempts_left']/4)*100;
+	}
+echo '<p>Liczba prób: ' . $_SESSION['attempts_left'] . '</p>
+	<div class="h-4 bg-gray-200 rounded-full">
+  	<div class="h-full bg-green-500 rounded-full" style="width: ' . $progress . '%;">
+  	</div>
+	</div><HR class="my-4">';
 
-// przycisk podpowiedzi
-if (!$gameWon && !$gameLost && !$_SESSION['word_guessed'] && $_SESSION['hint_count'] > 0) {
-    echo '
-        <form method="post" action="">
-            <input type="submit" name="hint" value="Podpowiedź">
-        </form>
-        ';
-}
 
-// przycisk powrotu do menu
-echo '
-    <form method="post" action="menu.php">
-        <input type="submit" value="Powrót do menu">
-    </form>
-    ';
+// Wyświetlanie licznika wygranych i przegranych rund
+echo '<div class="flex justify-center">
+	<div class="flex items-center">
+  	<span class="mr-2">
+    	<span class="px-2 py-1 bg-green-500 text-white rounded-full">Win: ' . $_SESSION['wins'] . '</span>
+  	</span>
+  	<span>
+    	<span class="px-2 py-1 bg-red-500 text-white rounded-full">Loss: ' . $_SESSION['losses'] . '</span>
+  	</span>
+	</div></div><HR class="my-4">';
+
+// Obliczanie wskaźnika skuteczności wygrywania
+$totalGames = $_SESSION['game_won'] + $_SESSION['game_lost'];
+$accuracyRate = ($totalGames > 0) ? round(($_SESSION['game_won'] / $totalGames) * 100) : 0;
+echo '<p>Wskaźnik skuteczności: ' . $accuracyRate . '%</p>
+<div class="h-4 bg-gray-200 rounded-full">
+  	<div class="h-full bg-green-500 rounded-full" style="width: ' . $accuracyRate . '%;">
+  	</div>
+	</div><HR class="my-4">';
+
 ?>
-</center></p>
-<div id="grad1"></div>
-</body>
-</html>
